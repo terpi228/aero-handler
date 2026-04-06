@@ -1,6 +1,6 @@
 # функция user_interaction()
-from src.opensky_api import OpenSkyAPI
 from src.json_storage import JSONSaver
+from src.opensky_api import OpenSkyAPI
 
 
 def _altitude_key(state: list) -> float:
@@ -63,7 +63,9 @@ def _print_compact_top(compact_top: list[dict]) -> None:
         )
 
 
-def _filter_by_registration_country(data: dict, registration_country: str) -> list[dict]:
+def _filter_by_registration_country(
+    data: dict, registration_country: str
+) -> list[dict]:
     target = registration_country.strip().lower()
     if not target:
         return []
@@ -76,17 +78,22 @@ def _filter_by_registration_country(data: dict, registration_country: str) -> li
     ]
 
 
-def _filter_by_altitude_range(data: dict, min_altitude: float, max_altitude: float) -> list[dict]:
+def _filter_by_altitude_range(
+    data: dict, min_altitude: float, max_altitude: float
+) -> list[dict]:
     fly_data = data.get("fly_data", [])
     compact = [_to_compact_aircraft(item) for item in fly_data]
     return [
         item
         for item in compact
-        if item.get("altitude_m") is not None and min_altitude <= float(item["altitude_m"]) <= max_altitude
+        if item.get("altitude_m") is not None
+        and min_altitude <= float(item["altitude_m"]) <= max_altitude
     ]
 
 
-def _print_aircraft_list(title: str, aircraft_list: list[dict], limit: int = 20) -> None:
+def _print_aircraft_list(
+    title: str, aircraft_list: list[dict], limit: int = 20
+) -> None:
     if not aircraft_list:
         print("Ничего не найдено.")
         return
@@ -105,6 +112,16 @@ def _pause() -> None:
     input("\nНажмите Enter, чтобы вернуться в меню...")
 
 
+def _print_api_logs(api: OpenSkyAPI, limit: int = 20) -> None:
+    logs = api.get_logs(limit=limit)
+    if not logs:
+        print("Логи API пока пусты.")
+        return
+    print("Последние логи OpenSky API:")
+    for line in logs:
+        print(f"- {line}")
+
+
 def user_menu():
     name_cuntry = input(str("введите название страны:"))
     api = OpenSkyAPI()
@@ -115,9 +132,7 @@ def user_menu():
         print(f"Не удалось получить данные: {data['error']}")
         return
 
-    print(
-        f"получено {data['count']} самолетов из странны {name_cuntry}."
-    )
+    print(f"получено {data['count']} самолетов из странны {name_cuntry}.")
 
     top_n = _ask_top_n()
     if top_n is None:
@@ -135,13 +150,21 @@ def user_menu():
     while True:
         print("""
 -------------menu--------------
+Основное:
 1. Пересчитать топ N по высоте
 2. Самолёты по стране регистрации
 3. Фильтр по диапазону высот
+
+История:
 5. История топов
 6. Очистить историю топов
-4. Выход
-Выберите действие (1-6):
+
+Логи API:
+7. Показать логи API
+8. Очистить логи API
+
+0. Выход
+Выберите действие (0-8):
 """)
 
         users_input = input("Введите действие:").strip()
@@ -189,7 +212,7 @@ def user_menu():
         elif users_input == "5":
             try:
                 history = saver.load("latest.json").get("requests", [])
-            except (FileNotFoundError, OSError, ValueError):
+            except FileNotFoundError, OSError, ValueError:
                 history = []
 
             if not history:
@@ -209,9 +232,16 @@ def user_menu():
             saver.clear_history()
             print("История топов очищена.")
             _pause()
-        elif users_input == "4":
+        elif users_input == "7":
+            _print_api_logs(api)
+            _pause()
+        elif users_input == "8":
+            api.clear_logs()
+            print("Логи API очищены.")
+            _pause()
+        elif users_input == "0":
             print("Выход из программы.")
             break
         else:
-            print("Неизвестный пункт меню. Введите число от 1 до 6.")
+            print("Неизвестный пункт меню. Введите число от 0 до 8.")
             _pause()
