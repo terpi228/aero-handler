@@ -1,6 +1,7 @@
 # OpenSkyAPI + Nominati
 
 import json
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from .base_api import BaseAPI
@@ -58,13 +59,38 @@ class OpenSkyAPI(BaseAPI):
         return {
             "fly_data": fly_data,
             "count": len_fly,
-        }  # словарь с понятными ключами
+        }
 
     def get_aircraft_by_country(self, country_name: str):
-        bbox = self.get_bounding_box(country_name)
-        if not bbox:
-            return {"fly_data": [], "count": 0, "error": "Страна не найдена"}
-        return self.get_aircraft(bbox)
+        try:
+            bbox = self.get_bounding_box(country_name)
+            if not bbox:
+                return {"fly_data": [], "count": 0, "error": "Страна не найдена"}
+            return self.get_aircraft(bbox)
+        except HTTPError as error:
+            return {
+                "fly_data": [],
+                "count": 0,
+                "error": f"Ошибка HTTP при запросе к API: {error.code}",
+            }
+        except URLError:
+            return {
+                "fly_data": [],
+                "count": 0,
+                "error": "Сетевая ошибка: нет доступа к API",
+            }
+        except TimeoutError:
+            return {
+                "fly_data": [],
+                "count": 0,
+                "error": "Сетевая ошибка: превышено время ожидания API",
+            }
+        except json.JSONDecodeError:
+            return {
+                "fly_data": [],
+                "count": 0,
+                "error": "Ошибка данных: API вернул некорректный JSON",
+            }
 
 
 if __name__ == "__main__":

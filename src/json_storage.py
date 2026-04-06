@@ -13,21 +13,44 @@ class JSONSaver:
 
     def save(self, data: Any, file_name: str) -> Path:
         """Сохраняет данные в указанный JSON-файл."""
-        file_path = self.base_dir / file_name
+        normalized_name = file_name if file_name.endswith(".json") else f"{file_name}.json"
+        file_path = self.base_dir / normalized_name
         with file_path.open("w", encoding="utf-8") as json_file:
             json.dump(data, json_file, ensure_ascii=False, indent=2)
         return file_path
 
-    def save_snapshot(self, country_name: str, data: Any) -> Path:
-        """
-        Автоматически сохраняет снимок данных:
-        - в уникальный файл с временем;
-        - в latest.json (последний результат).
-        """
-        safe_country = country_name.strip().replace(" ", "_").lower() or "unknown"
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        snapshot_name = f"{safe_country}_{timestamp}.json"
+    def load(self, file_name: str = "latest.json") -> Any:
+        """Загружает данные из JSON-файла."""
+        normalized_name = file_name if file_name.endswith(".json") else f"{file_name}.json"
+        file_path = self.base_dir / normalized_name
+        with file_path.open("r", encoding="utf-8") as json_file:
+            return json.load(json_file)
 
-        snapshot_path = self.save(data, snapshot_name)
-        self.save(data, "latest.json")
-        return snapshot_path
+    def append_top(self, top: list[dict[str, Any]], top_count: int, country_name: str) -> Path:
+        """Добавляет запись топа в единый latest.json с номером запроса."""
+        file_path = self.base_dir / "latest.json"
+        if file_path.exists():
+            try:
+                payload = self.load("latest.json")
+            except (json.JSONDecodeError, OSError):
+                payload = {"requests": []}
+        else:
+            payload = {"requests": []}
+
+        requests = payload.get("requests", [])
+        request_number = len(requests) + 1
+        requests.append(
+            {
+                "request_number": request_number,
+                "country": country_name,
+                "top_count": top_count,
+                "top": top,
+                "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+        )
+        payload["requests"] = requests[-50:]
+        return self.save(payload, "latest.json")
+
+    def clear_history(self) -> Path:
+        """Очищает историю топов в latest.json."""
+        return self.save({"requests": []}, "latest.json")
