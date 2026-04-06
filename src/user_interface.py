@@ -1,14 +1,18 @@
 # функция user_interaction()
 from src.opensky_api import OpenSkyAPI
+from src.json_storage import JSONSaver
 
 
 def user_menu():
     name_cuntry = input(str("введите название страны:"))
     api = OpenSkyAPI()
+    saver = JSONSaver()
     data = api.get_aircraft_by_country(name_cuntry)
+    saved_path = saver.save_snapshot(name_cuntry, data)
 
     print(
-        f"получено {data['count']} самолетов из странны {name_cuntry} данные будут сохронятся в дальнейшей версии"
+        f"получено {data['count']} самолетов из странны {name_cuntry}. "
+        f"Данные автоматически сохранены: {saved_path}"
     )
     print("--------------menu--------------")
     print("""1. Топ N по высоте

@@ -1,6 +1,8 @@
 # OpenSkyAPI + Nominati
 
-import requests, json
+import json
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 from .base_api import BaseAPI
 
 
@@ -9,6 +11,13 @@ class OpenSkyAPI(BaseAPI):
         self.nominatim_url = "https://nominatim.openstreetmap.org/search"
         self.opensky_url = "https://opensky-network.org/api/states/all"
         self.headers = {"User-Agent": "MyAircraftApp/1.0"}
+
+    def _get_json(self, url: str, params: dict):
+        query = urlencode(params)
+        full_url = f"{url}?{query}" if query else url
+        request = Request(full_url, headers=self.headers)
+        with urlopen(request, timeout=20) as response:
+            return json.loads(response.read().decode("utf-8"))
 
     def get_bounding_box(self, cuntry_name):
         """Берём коордитнаты из апи Nominatim нужной страны
@@ -21,8 +30,7 @@ class OpenSkyAPI(BaseAPI):
             "limit": 1,
         }
 
-        response = requests.get(url, params=params, headers=self.headers)
-        data = response.json()
+        data = self._get_json(url, params)
         if data:
             bbox = data[0]["boundingbox"]
             return {
@@ -44,15 +52,13 @@ class OpenSkyAPI(BaseAPI):
             "lomin": bbox["lomin"],
             "lomax": bbox["lomax"],
         }
-        response = requests.get(self.opensky_url, params=params)
-        if response.status_code == 200:
-            fly_data = response.json().get("states", [])
-            len_fly = len(fly_data)
-            return {
-                "fly_data": fly_data,
-                "count": len_fly,
-            }  # словарь с понятными ключами
-        return {"fly_data": [], "count": 0}
+        data = self._get_json(self.opensky_url, params)
+        fly_data = data.get("states", [])
+        len_fly = len(fly_data)
+        return {
+            "fly_data": fly_data,
+            "count": len_fly,
+        }  # словарь с понятными ключами
 
     def get_aircraft_by_country(self, country_name: str):
         bbox = self.get_bounding_box(country_name)
