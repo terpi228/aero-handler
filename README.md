@@ -1,134 +1,139 @@
-# ✈️ Aero Handler
+# ✈️ AeroHandler
 
-Консольное Python-приложение для получения и анализа данных о самолётах над выбранной страной.
-Использует внешние API:
-- [Nominatim](https://nominatim.openstreetmap.org/) для координат страны (bounding box)
-- [OpenSky Network](https://opensky-network.org/) для state-vector самолётов
+Проект для получения данных о воздушных судах через OpenSky Network API, сохранения их в PostgreSQL и выполнения аналитических запросов.
 
-## Что умеет
+---
 
-- запрашивает страну и получает список самолётов в её воздушном пространстве
-- показывает общее количество найденных рейсов
-- строит топ `N` самолётов по высоте
-- фильтрует самолёты:
-  - по стране регистрации
-  - по диапазону высот
-- сохраняет историю запросов в `data/latest.json`
-- показывает последние запросы и умеет очищать историю
+## 📌 Функционал
 
-## Технологии
+- Получение координат стран через Nominatim API.
+- Загрузка списка самолётов в воздушном пространстве выбранных стран через OpenSky API.
+- Сохранение данных в PostgreSQL (таблицы `countries` и `aircraft`).
+- Выполнение запросов через класс `DBManager`:
+  - список стран с количеством самолётов;
+  - все самолёты с деталями;
+  - средняя скорость;
+  - самолёты со скоростью выше средней;
+  - поиск по подстроке в позывном.
 
-- Python 3.14+
-- `requests` (зависимость проекта)
-- `pytest`, `pytest-cov` (тесты и покрытие)
+---
 
-## Быстрый старт
+## 🛠️ Технологии
 
-```bash
-git clone <url-репозитория>
-cd aero-handler
-python -m pip install requests pytest pytest-cov black isort flake8
+- Python 3.10+
+- PostgreSQL
+- psycopg2-binary
+- requests
+- python-dotenv
+
+---
+
+## 📁 Структура проекта
+
 ```
-
-Запуск приложения:
-
-```bash
-python main.py
-```
-
-## Команды для разработки
-
-### Всё разом (красивый вывод в консоль)
-
-Один прогон: `isort` → `black` → `flake8` → `pytest`, с понятными сообщениями вида «в параметре … всё ок».
-
-```bash
-python scripts/dev_check.py
-```
-
-Только проверка без автоправок (как в CI):
-
-```bash
-python scripts/dev_check.py --ci
-```
-
-С дополнительным шагом покрытия:
-
-```bash
-python scripts/dev_check.py --cov
-```
-
-Если установлен `make` (Git Bash, WSL, Linux, macOS):
-
-```bash
-make check
-make check-ci
-make check-cov
-```
-
-### По отдельности
-
-Запуск тестов:
-
-```bash
-python -m pytest -q
-```
-
-Проверка покрытия:
-
-```bash
-python -m pytest --cov=src --cov-report=term -q
-```
-
-## Текущее качество
-
-- автотесты: **33 passed**
-- общее покрытие: **85%**
-
-Покрытие ключевых модулей:
-- `src/aircraft.py` — 98%
-- `src/json_storage.py` — 100%
-- `src/opensky_api.py` — 82%
-- `src/user_interface.py` — 80%
-
-## Структура проекта
-
-```text
 aero-handler/
-├── main.py
-├── src/
-│   ├── aircraft.py
-│   ├── base_api.py
-│   ├── base_storage.py
-│   ├── json_storage.py
-│   ├── opensky_api.py
-│   └── user_interface.py
-├── tests/
-│   ├── test_aircraft.py
-│   ├── test_json_storage.py
-│   ├── test_opensky_api.py
-│   ├── test_user_interface.py
-│   ├── test_user_menu.py
-│   └── test_abstract_contracts.py
-└── data/
-    └── latest.json
+├── config.py           # настройки БД и список стран
+├── database.py         # работа с PostgreSQL (создание таблиц, вставка данных)
+├── api_client.py       # клиент для OpenSky и Nominatim
+├── db_manager.py       # класс DBManager с аналитическими методами
+├── main.py             # основной скрипт для заполнения БД
+├── check_db.py         # пример использования DBManager
+├── requirements.txt    # зависимости
+├── .env                # переменные окружения (не в репозитории)
+└── README.md
 ```
 
-## Пример сценария в консоли
+---
 
-```text
-введите название страны:Spain
-получено 123 самолетов из странны Spain.
-Введите количество самолетов в топе в мире: 10
-Текущий топ по высоте:
-1. callsign=...
+## ⚙️ Установка и настройка
+
+1. **Клонируйте репозиторий**  
+   ```bash
+   git clone <url>
+   cd aero-handler
+   ```
+
+2. **Создайте и активируйте виртуальное окружение**  
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate   # Linux/Mac
+   .venv\Scripts\activate      # Windows
+   ```
+
+3. **Установите зависимости**  
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Создайте файл `.env` в корне проекта**  
+   ```
+   DB_NAME=postgres
+   DB_USER=postgres
+   DB_PASSWORD=your_password
+   DB_HOST=localhost
+   DB_PORT=5432
+   ```
+
+5. **Настройте список стран** в `config.py` (по умолчанию 12 стран).
+
+---
+
+## 🚀 Запуск
+
+1. **Заполнение БД данными**  
+   ```bash
+   python main.py
+   ```
+
+2. **Проверка работы DBManager**  
+   ```bash
+   python check_db.py
+   ```
+
+---
+
+## 📊 Пример вывода
+
+```
+=== Страны и количество самолётов ===
+('United States', 7970)
+('France', 7059)
+('Russia', 4543)
+('Germany', 775)
+...
+
+=== Средняя скорость ===
+168.37
+
+=== Самолёты со скоростью выше средней ===
+('39de4e', 'TVF67YK', 'France', 12100.56, 233.64, 1)
+...
+
+=== Самолёты с позывным, содержащим 'AIR' ===
+('4d0286', 'AIRESC1', 'Luxembourg', 662.94, 59.62, 1)
 ...
 ```
 
-## Архитектура
+---
 
-- `BaseAPI` и `BaseStorage` задают абстрактные контракты
-- `OpenSkyAPI` инкапсулирует сетевое взаимодействие и обработку ошибок API
-- `Aircraft` валидирует входные данные и хранит модель самолёта
-- `JSONSaver` отвечает только за работу с JSON-хранилищем
-- `user_interface` содержит пользовательский сценарий и меню
+## 📝 Примечания
+
+- Проект соответствует принципам SOLID.
+- Все классы и методы документированы.
+- В таблице `aircraft` используется уникальный индекс (`icao24`, `country_id`) для предотвращения дублирования.
+- Минимальное количество стран — 12 (требование ТЗ — ≥10).
+
+---
+
+## ✅ Критерии выполнения
+
+| Критерий | Статус |
+|----------|--------|
+| Модульность | ✅ |
+| SOLID | ✅ |
+| Документация | ✅ |
+| PostgreSQL + psycopg2 | ✅ |
+| ≥10 стран | ✅ |
+| Таблицы заполнены | ✅ |
+| Все методы DBManager | ✅ |
+| JOIN, AVG, фильтры | ✅ |

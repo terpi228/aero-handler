@@ -1,4 +1,6 @@
 # функция user_interaction()
+import os
+
 from src.json_storage import JSONSaver
 from src.opensky_api import OpenSkyAPI
 
@@ -148,6 +150,7 @@ def user_menu():
     print(f"Топ {len(compact_top)} сохранён в один файл: {saved_path}")
 
     while True:
+        os.system('cls' if os.name == 'nt' else 'clear')
         print("""
 -------------menu--------------
 Основное:
@@ -156,12 +159,12 @@ def user_menu():
 3. Фильтр по диапазону высот
 
 История:
-5. История топов
-6. Очистить историю топов
+4. История топов
+5. Очистить историю топов
 
 Логи API:
-7. Показать логи API
-8. Очистить логи API
+6. Показать логи API
+7. Очистить логи API
 
 0. Выход
 Выберите действие (0-8):
@@ -209,7 +212,7 @@ def user_menu():
                 result,
             )
             _pause()
-        elif users_input == "5":
+        elif users_input == "4":
             try:
                 history = saver.load("latest.json").get("requests", [])
             except FileNotFoundError, OSError, ValueError:
@@ -228,14 +231,14 @@ def user_menu():
                     f"top_count={item.get('top_count')}"
                 )
             _pause()
-        elif users_input == "6":
+        elif users_input == "5":
             saver.clear_history()
             print("История топов очищена.")
             _pause()
-        elif users_input == "7":
+        elif users_input == "6":
             _print_api_logs(api)
             _pause()
-        elif users_input == "8":
+        elif users_input == "7":
             api.clear_logs()
             print("Логи API очищены.")
             _pause()
